@@ -13,7 +13,7 @@
 
 int platformOpenScreen();
 
-void coreInit();
+int coreInit();
 void coreReshape(int width, int height);
 void coreRender();
 

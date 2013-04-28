@@ -119,6 +119,8 @@ DWORD WINAPI win32MainLoop(LPVOID lParam)
 	HWND  wnd;
 	MSG   msg;
 
+	int result;
+
 	EnterCriticalSection(&win32Lock);
 
 	wnd = win32CreateViewport("ScreenKit P2.1 Demo", 0, 0, 256, 256);
@@ -131,7 +133,12 @@ DWORD WINAPI win32MainLoop(LPVOID lParam)
 	hrc = wglCreateContext(hdc);
 	wglMakeCurrent(hdc, hrc);
 
-	coreInit();
+	result = coreInit();
+	if (result != ERR_OK)
+	{
+		return result;
+	}
+
 	ShowWindow(wnd, SW_SHOWDEFAULT);
 
 	LeaveCriticalSection(&win32Lock);

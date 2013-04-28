@@ -1,10 +1,18 @@
 #include "screen.h"
 
-#include <stdio.h>
-
-
 int __h;
 int __w;
+
+int coreInit()
+{
+	glClearColor(0, 0, 0, 0);
+	// glEnable(GL_TEXTURE_RECTANGLE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); 
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+	return ERR_OK;
+}
 
 void coreReshape(int width, int height)
 {
@@ -17,16 +25,6 @@ void coreReshape(int width, int height)
 	glLoadIdentity();
 	gluOrtho2D(0, width, height, 0);
 	glMatrixMode(GL_MODELVIEW);
-}
-
-void coreInit()
-{
-	// printf("coreInit()\n");
-	glClearColor(0, 0, 0, 0);
-	// glEnable(GL_TEXTURE_RECTANGLE);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); 
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 }
 
 void coreRender()
