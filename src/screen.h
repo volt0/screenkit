@@ -17,4 +17,10 @@ int coreInit();
 void coreReshape(int width, int height);
 void coreRender();
 
+static const int fontBitmapWidthEm;
+static const int fontBitmapHeightEm;
+static const int fontBitmapWidthPx;
+static const int fontBitmapHeightPx;
+static const unsigned char *fontBitmap;
+
 #endif

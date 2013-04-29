@@ -42,13 +42,13 @@ def configure(conf):
             'glu32',
             ])
 
-        glew_lib = 'glew32s'
+        glew_lib = ['glew32', 'glew32s']
     
     
     conf.check(header_name='gl/glew.h')
     conf.check(header_name='Python.h')
 
-    conf.check_cc(lib=glew_lib)
+    conf.check_cc(lib=glew_lib, uselib_store='GLEW')
     conf.check_cc(lib=('python%s' % sysconfig.get_config_vars('VERSION')[0]))
     
     # conf.env.append_value('CFLAGS', '-O2')
@@ -74,6 +74,7 @@ def build(bld):
             bld.env.PLATFORMSRC
             ]),
         use      = 'font',
+        uselib   = 'GLEW',
     )
 
 import re
@@ -115,13 +116,20 @@ class scfont(Task):
             re.DOTALL
             )
         
-        result = ''#include "../src/screen.h"\n'
+        result = ''
         dump = self.inputs[0].read()
 
         renderer = scfont_renderer()
         for i in char_re.finditer(dump):
             renderer.render(list(i.groups()[1:]))
 
+        bmp_width = renderer.texture_width
+        bmp_height = renderer.row + 1
+
+        result += 'static const int fontBitmapWidthEm = %d;\n' % bmp_width
+        result += 'static const int fontBitmapHeightEm = %d;\n' % bmp_height
+        result += 'static const int fontBitmapWidthPx = %d;\n' % (bmp_width * 8)
+        result += 'static const int fontBitmapHeightPx = %d;\n' % (bmp_height * 16)
         result += 'static const unsigned char %sBitmap[] = {\n' % 'font'#self.target
         result += renderer.done()
         result += '0x00};\n'
