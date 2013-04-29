@@ -52,6 +52,12 @@ def configure(conf):
 
 def build(bld):
     bld(
+        target   ='font',
+        features ='scfont c cstlib',
+        assets   ='assets',
+        )
+
+    bld(
         target   = 'screen',
         features = 'c cshlib pyshlib',
         source   = bld.path.ant_glob([
@@ -59,6 +65,7 @@ def build(bld):
             'assets/*.hex',
             ]),
         lib      = bld.env.LIB,
+        use      = 'font'
     )
 
     # bld(
@@ -80,100 +87,70 @@ def pyshlib_setenv(self):
     self.env.cshlib_PATTERN = '%s.pyd'
     self.env.cxxshlib_PATTERN = '%s.pyd'
 
-@feature('hexfont')
-@extension('.hex')
-def hexfont_process(self, in_node):
-    out_node = in_node.change_ext('.c')
-    self.create_task('hexfont', in_node, out_node)
-    self.source.append(out_node)
+@feature('scfont')
+@before_method('process_source')
+def scfont_feature(self):
+    in_folder = self.bld.srcnode.find_node(getattr(self, 'assets', None))
+    out_folder = self.bld.bldnode.find_or_declare(getattr(self, 'assets', None))
+    
+    task = self.create_task('scfont')
+    task.inputs = map(lambda x: in_folder.find_node(x), scfont.font_files)
+    task.outputs = [out_folder.find_or_declare(self.target + '.c')]
+    self.source = self.source or []
+    self.source.extend(task.outputs)
 
-class hexfont(Task):
+class scfont(Task):
     color = 'CYAN'
+
+    font_files = ['ter-u16n.bdf']
+
     def run(self):
-        font_name = self.inputs[0].name.split(os.extsep, 1)[0]
-
-        pattern_blank = [
-            '00542A542A542A542A542A542A542A00',
-            'FFB9C5EDD5D5D5D5D5D5D5D5EDB991FF',
-            ]
-
-        glyph_re = re.compile('([0-9A-f]{4}):([0-9A-f]{32,64})')
-
-        def glyph_process(s):
-            match = glyph_re.match(s)
-            return (int(match.group(1), 16), match.group(2))
-
-        glyphs = dict(map(
-            glyph_process,
-            self.inputs[0].read().splitlines(True)
-            ))
-
-        glyph_width = 8
-        glyph_height = 16
-
-        info = {}
-        result = '#include <stdint.h>\n'
-
-        bmp = bitmap_renderer()
+        char_re = re.compile(
+            'STARTCHAR.*?ENCODING ([0-9]+).*?BITMAP[\n\r]+' +
+            '([0-9a-fA-F]+)[\n\r]+([0-9a-fA-F]+)[\n\r]+([0-9a-fA-F]+)[\n\r]+([0-9a-fA-F]+)[\n\r]+' +
+            '([0-9a-fA-F]+)[\n\r]+([0-9a-fA-F]+)[\n\r]+([0-9a-fA-F]+)[\n\r]+([0-9a-fA-F]+)[\n\r]+' +
+            '([0-9a-fA-F]+)[\n\r]+([0-9a-fA-F]+)[\n\r]+([0-9a-fA-F]+)[\n\r]+([0-9a-fA-F]+)[\n\r]+' +
+            '([0-9a-fA-F]+)[\n\r]+([0-9a-fA-F]+)[\n\r]+([0-9a-fA-F]+)[\n\r]+([0-9a-fA-F]+)[\n\r]+' +
+            '.*?ENDCHAR',
+            re.DOTALL
+            )
         
-        # Sysytem glyphs
+        result = ''#include "../src/screen.h"\n'
+        dump = self.inputs[0].read()
 
-        # Basic Latin
-        for i in range(0x0020, 0x007f):
-            bmp.render(glyphs[i])
+        renderer = scfont_renderer()
+        for i in char_re.finditer(dump):
+            renderer.render(list(i.groups()[1:]))
 
-
-        result += 'static const int8_t %sBitmap[] = {\n' % font_name
-        result += bmp.done()
+        result += 'static const unsigned char %sBitmap[] = {\n' % 'font'#self.target
+        result += renderer.done()
         result += '0x00};\n'
+        
+        self.outputs[0].write(result)
 
-        # for i in glyphs:
-        #     result += '//{0x%x, "%s"}\n' % (i['id'], i['bitmap'])
-
-        # self.inputs[0].__str__()
-        self.outputs[0].write(result);
-        return 0
-
-class bitmap_renderer:
-    texture_width = 256
+class scfont_renderer:
+    texture_width = 128
 
     def __init__(self):
-        self.bitmap_rows = [
-            '', '', '', '',
-            '', '', '', '',
-            '', '', '', '',
-            '', '', '', '',
-            ]
+        self.bitmap_rows = ['' for _ in range(0, 16)]
         self.row = 0
         self.col = 0
         self.result = ''
 
     def render(self, ch):
-        for i in range(0, 16):
-            self.bitmap_rows[i] += '0x%s,' % ch[(i*2):(i*2)+2]
+        self.bitmap_rows = map(
+            lambda (a,b): a + ('0x%s,' % b),
+            zip(self.bitmap_rows, ch)
+            )
         
-        self.row += 1
-        if self.row >= self.texture_width:
-            self.col += 1
-            self.row = 0 
+        self.col += 1
+        if self.col >= self.texture_width:
+            self.row += 1
+            self.col = 0
+
+            self.result += ''.join(['%s\n' % i for i in self.bitmap_rows])
+            self.bitmap_rows = ['' for _ in range(0, 16)]
 
     def done(self):
-        for i in self.bitmap_rows:
-            self.result += '%s\n' % i
-
-        return self.result
-
-
-    # def render_glyph2(ch):
-    #     if len(ch) == 32:
-    #         off = 0
-    #         for i in range(0, 15):
-    #             bitmap_rows[i] += '0x%s,' % ch[off:off+2]
-    #             off += 2
-    #             row += 1
-    #     else:
-    #         off = 0
-    #         for i in range(0, 15):
-    #             bitmap_rows[i] += '0x%s,0x%s' % (ch[off:off+2], ch[off+2:off+4])
-    #             off += 4
-    #             row += 2
+        delta = range(0, self.texture_width - self.col)
+        return self.result + ''.join(['%s%s\n' % (i, ''.join(['0x00,' for _ in delta])) for i in self.bitmap_rows])
