@@ -19,14 +19,18 @@ def configure(conf):
 
     conf.env.LIB = []
 
+    glew_lib = 'glew'
+
     if sys.platform.startswith('win32'):
         conf.load('msvc')
         
-        conf.env.append_value('INCLUDES', 'extras')
-        conf.env.append_value('LIBPATH', 'extras')
+        conf.env.append_value('INCLUDES', os.path.abspath('extras'))
+        conf.env.append_value('LIBPATH', os.path.abspath('extras'))
 
         conf.env.append_value('INCLUDES', sysconfig.get_python_inc(True))
         conf.env.append_value('LIBPATH', os.path.join(sys.prefix, 'libs'))
+
+        conf.env.PLATFORMSRC = 'src/win32.c'
 
         conf.env.LIB.extend([
             'kernel32',
@@ -36,16 +40,20 @@ def configure(conf):
             'shell32',
             'opengl32',
             'glu32',
-            'glew32',
             ])
 
-    conf.check_cc(lib=('python%s' % sysconfig.get_config_vars('VERSION')[0]))
-    conf.check(header_name='Python.h')
+        glew_lib = 'glew32s'
+    
+    
     conf.check(header_name='gl/glew.h')
+    conf.check(header_name='Python.h')
+
+    conf.check_cc(lib=glew_lib)
+    conf.check_cc(lib=('python%s' % sysconfig.get_config_vars('VERSION')[0]))
     
     # conf.env.append_value('CFLAGS', '-O2')
 
-    for i in conf.env.LIB:
+    for i in conf.env.screen_LIB:
         conf.check_cc(lib=i)
 
     # conf.write_config_header('config.h')
@@ -53,7 +61,7 @@ def configure(conf):
 def build(bld):
     bld(
         target   ='font',
-        features ='scfont c cstlib',
+        features ='scfont c',
         assets   ='assets',
         )
 
@@ -61,20 +69,12 @@ def build(bld):
         target   = 'screen',
         features = 'c cshlib pyshlib',
         source   = bld.path.ant_glob([
-            'src/*.c',
-            'assets/*.hex',
+            'src/screen.c',
+            'src/core.c',
+            bld.env.PLATFORMSRC
             ]),
-        lib      = bld.env.LIB,
-        use      = 'font'
+        use      = 'font',
     )
-
-    # bld(
-    #     target   = 'test',
-    #     features = 'c cprogram',
-    #     source   = bld.path.ant_glob(['assets/*.c', 'test/*.c']),
-    #     lib      = ['glew32', 'glut32', 'opengl32'],
-    #     # use      = ['screen'],
-    # )
 
 import re
 from waflib.TaskGen import feature, before_method, after_method, extension
