@@ -5,13 +5,13 @@
 int __h;
 int __w;
 
-static const char *trssVertSrc =
+const char *trssVertSrc =
 "void main(){"
 "gl_TexCoord[0] = gl_MultiTexCoord0;"
 "gl_Position=gl_ModelViewProjectionMatrix*gl_Vertex;"
 "}";
 
-static const char *trssFragSrc =
+const char *trssFragSrc =
 "uniform sampler2DRect font;"
 "uniform sampler2DRect fg;"
 "uniform sampler2DRect bg;"
@@ -21,7 +21,17 @@ static const char *trssFragSrc =
 "ivec2 pos=ivec2(gl_TexCoord[0].st/csz);"
 "ivec2 off=ivec2(mod(gl_TexCoord[0].st,csz));"
 
-"if(texture2DRect(font,texture2DRect(map,vec2(0,0)).rg+off).a==0){"
+// "int ch=int(texture2DRect(map,pos).r);"
+"float ch=texture2DRect(map,pos).r;"
+// "if(texture2DRect(font,vec2(mod(ch,128),floor(ch/128))).r==0){" // !!
+
+"if(texture2DRect(font,(vec2(mod(ch,128),floor(ch/128))*csz)+off).a==0){"
+//"if(ch==0){"
+// "if(a.x==0){"
+// "gl_FragColor=vec4(b,b,0,1);"
+// "gl_FragColor=vec4(0,1,1,1);}else{gl_FragColor=vec4(1,1,0,1);}"
+
+// "if(texture2DRect(font,texture2DRect(map,vec2(0,0)).rg+off).a==0){"
 "gl_FragColor=texture2DRect(bg,pos);"
 "}else{"
 "float a=texture2DRect(fg,pos).a;"
@@ -85,10 +95,10 @@ int trssInit()
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glPixelMapfv(GL_PIXEL_MAP_I_TO_A, 2, index);
 	
-	// glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	// glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	// glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	// glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	
 	glTexImage2D(
 		GL_TEXTURE_RECTANGLE,
@@ -111,10 +121,11 @@ int trssInit()
 		uint8_t *fg;
 		uint8_t *bg;
 		float *map;
+		
 		s = h*w;
 		fg = malloc(s*4);
 		bg = malloc(s*4);
-		map = malloc(s*2*sizeof(float));
+		map = malloc(s*sizeof(float));
 		
 		for (i = 0; i < s; i++)
 		{
@@ -130,8 +141,7 @@ int trssInit()
 			bg[(i*4) + 2] = 0x80;
 			bg[(i*4) + 3] = 0x7f;
 
-			map[(i*2)    ] = 0.0f;
-			map[(i*2) + 1] = 0.0f;
+			map[i        ] = (float)(i % (w*8));
 		}
 
 		glGenTextures(1, &__fgTexture);
@@ -141,7 +151,7 @@ int trssInit()
 		glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexImage2D(GL_TEXTURE_RECTANGLE,0,GL_RGBA,w,h,0,GL_RGBA,GL_UNSIGNED_BYTE,(void*)fg);
+		glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)fg);
 
 		glGenTextures(1, &__bgTexture);
 		glBindTexture(GL_TEXTURE_RECTANGLE, __bgTexture);
@@ -150,7 +160,7 @@ int trssInit()
 		glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexImage2D(GL_TEXTURE_RECTANGLE,0,GL_RGBA,w,h,0,GL_RGBA,GL_UNSIGNED_BYTE,(void*)bg);
+		glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)bg);
 
 		glGenTextures(1, &__mapTexture);
 		glBindTexture(GL_TEXTURE_RECTANGLE, __mapTexture);
@@ -159,7 +169,7 @@ int trssInit()
 		glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexImage2D(GL_TEXTURE_RECTANGLE,0,GL_RG16F,w,h,0,GL_RG,GL_FLOAT,(void*)map);
+		glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32F, w, h, 0, GL_RED, GL_FLOAT, (void*)map);
 
 		free(fg);
 		free(bg);

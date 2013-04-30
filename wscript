@@ -116,7 +116,7 @@ class scfont(Task):
             re.DOTALL
             )
         
-        result = ''
+        result = '#include "../src/screen.h"\n'
         dump = self.inputs[0].read()
 
         renderer = scfont_renderer()
@@ -126,11 +126,11 @@ class scfont(Task):
         bmp_width = renderer.texture_width
         bmp_height = renderer.row + 1
 
-        result += 'static const int fontBitmapWidthEm = %d;\n' % bmp_width
-        result += 'static const int fontBitmapHeightEm = %d;\n' % bmp_height
-        result += 'static const int fontBitmapWidthPx = %d;\n' % (bmp_width * 8)
-        result += 'static const int fontBitmapHeightPx = %d;\n' % (bmp_height * 16)
-        result += 'static const unsigned char %sBitmap[] = {\n' % 'font'#self.target
+        result += 'const int fontBitmapWidthEm = %d;\n' % bmp_width
+        result += 'const int fontBitmapHeightEm = %d;\n' % bmp_height
+        result += 'const int fontBitmapWidthPx = %d;\n' % (bmp_width * 8)
+        result += 'const int fontBitmapHeightPx = %d;\n' % (bmp_height * 16)
+        result += 'const unsigned char %sBitmap[] = {\n' % 'font'#self.target
         result += renderer.done()
         result += '0x00};\n'
         
