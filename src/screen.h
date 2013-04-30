@@ -7,6 +7,7 @@
 #endif
 
 #include <gl/glew.h>
+#include <stdint.h>
 
 #define ERR_OK 0
 #define ERR_SYSTEM -1
@@ -16,6 +17,9 @@ int platformOpenScreen();
 int coreInit();
 void coreReshape(int width, int height);
 void coreRender();
+
+int trssInit();
+void trssRender();
 
 extern const int fontBitmapWidthEm;
 extern const int fontBitmapHeightEm;

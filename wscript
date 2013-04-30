@@ -71,6 +71,7 @@ def build(bld):
         source   = bld.path.ant_glob([
             'src/screen.c',
             'src/core.c',
+            'src/trss.c',
             bld.env.PLATFORMSRC
             ]),
         use      = 'font',

@@ -164,6 +164,7 @@ int platformOpenScreen()
 
 	InitializeCriticalSectionAndSpinCount(&win32Lock, 0x00000400);
 
+	// return win32MainLoop(NULL);
 	thread = CreateThread(NULL, 0, win32MainLoop, NULL, 0, NULL);
 	if (thread)
 	{
