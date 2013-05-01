@@ -13,6 +13,10 @@ typedef struct
     float *mapBuffer;
     uint32_t *fgBuffer;
     uint32_t *bgBuffer;
+
+    int position;
+    uint32_t fgColor;
+    uint32_t bgColor;
 } trssContext_t;
 
 trssContext_t __ctx;
@@ -92,6 +96,10 @@ int trssInit()
         const int s = h*w;
         int i;
 
+        __ctx.position = 0;
+        __ctx.fgColor = 0xffcccccc;
+        __ctx.bgColor = 0xff000000;
+
         glGenTextures(3, __ctx.textures);
         __ctx.mapBuffer = (float *)malloc(s*sizeof(float));
         __ctx.fgBuffer = (uint32_t *)malloc(s*sizeof(uint32_t));
@@ -100,8 +108,8 @@ int trssInit()
         for (i = 0; i < s; i++)
         {
             __ctx.mapBuffer[i] = 1.0f;
-            __ctx.fgBuffer[i] = 0xffcccccc;
-            __ctx.bgBuffer[i] = 0xff000000;
+            __ctx.fgBuffer[i] = __ctx.fgColor;
+            __ctx.bgBuffer[i] = __ctx.bgColor;
         }
 
         glBindTexture(GL_TEXTURE_RECTANGLE, __ctx.textures[0]);
@@ -124,6 +132,29 @@ int trssInit()
         glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)__ctx.bgBuffer);
+    }
+    {
+        const int h = 256;
+        const int w = 256;
+        wchar_t *i;
+        wchar_t *hello = L"Hello world P2";
+
+        for (i = hello; *i; ++i)
+        {
+            if ((*i >= 0x20) && (*i <= 0x7f))
+            {
+                __ctx.mapBuffer[__ctx.position] = *i - 0x1f;
+            }
+            else
+            {
+                __ctx.mapBuffer[__ctx.position] = 0.0f;
+            }
+
+            __ctx.position++;
+            
+            glBindTexture(GL_TEXTURE_RECTANGLE, __ctx.textures[0]);
+            glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32F, w, h, 0, GL_RED, GL_FLOAT, (void*)__ctx.mapBuffer);
+        }
     }
     // TMP }}
 
