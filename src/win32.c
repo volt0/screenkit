@@ -17,6 +17,19 @@ LONG WINAPI win32WndProc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 	case WM_SIZE:
 		{
+			// int wndDw;
+			// int wndDh;
+			// wndDw = LOWORD(lParam) % 8;
+			// wndDh = HIWORD(lParam) % 16;
+
+			// if (wndDw || wndDh)
+			// {
+			// 	SetWindowPos(wnd, 0, 0, 0, 250, 250, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+			// 	// SetWindowPos(wnd, 0, 0, 0, LOWORD(lParam) - wndDw, HIWORD(lParam) - wndDh, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+			// }
+			// else
+			// {
+			// }		
 			coreReshape(LOWORD(lParam), HIWORD(lParam));
 			PostMessage(wnd, WM_PAINT, 0, 0);
 		}

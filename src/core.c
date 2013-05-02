@@ -30,7 +30,7 @@ void coreReshape(int width, int height)
 {
 	__h = height;
 	__w = width;
-	trssReshape(__ctx, width/8, height/16);
+	trssReshape(__ctx, width, height);
 
 	glViewport(0, 0, width, height);
 	glMatrixMode(GL_PROJECTION);

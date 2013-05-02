@@ -127,6 +127,9 @@ int trssReshape(trssContext_t *self, int width, int height)
     uint32_t widthRq;
     uint32_t heightRq;
 
+    width = (width % 8 > 4) ? (width / 8) + 1 : width / 8;
+    height = (height % 16 > 8) ? (height / 16) + 1 : height / 16;
+
     widthRq = utilsUpperPowOf2(width);
     heightRq = utilsUpperPowOf2(height);
 
@@ -221,14 +224,17 @@ int trssReshape(trssContext_t *self, int width, int height)
 //     return S_OK;
 // }
 
+const float trssHStep = 8.0f;
+const float trssVStep = 16.0f;
+
 int trssRender(trssContext_t *self)
 {
     int i;
-    int __w;
-    int __h;
+    float widthTx;
+    float heightTx;
 
-    __w = self->width * 8;
-    __h = self->width * 16;
+    widthTx = (float)self->width * trssHStep;
+    heightTx = (float)self->height * trssVStep;
 
     glUseProgram(trssProgram);
     
@@ -242,19 +248,18 @@ int trssRender(trssContext_t *self)
     }
 
     glPushMatrix();
+    glScalef(trssHStep, trssVStep, 1.0f);
     glBegin(GL_QUADS);
     {
-        glTexCoord2i(0, 0);
-        glVertex2i  (0, 0);
-        glTexCoord2i(__w, 0);
-        glVertex2i  (__w, 0);
-        glTexCoord2i(__w, __h);
-        glVertex2i  (__w, __h);
-        glTexCoord2i(0, __h);
-        glVertex2i  (0, __h);
+        glTexCoord2f(0.0f,    0.0f);     glVertex2i(0, 0);
+        glTexCoord2f(widthTx, 0.0f);     glVertex2i(self->width, 0);
+        glTexCoord2f(widthTx, heightTx); glVertex2i(self->width, self->height);
+        glTexCoord2f(0.0f,    heightTx); glVertex2i(0, self->height);
     }
     glEnd();
     glPopMatrix();  
+
+    glUseProgram(0);
 
     return RES_OK;
 }
