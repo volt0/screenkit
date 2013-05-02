@@ -1,4 +1,6 @@
-#include "screen.h"
+#include "trss.h"
+
+#include <stdio.h>
 
 GLuint trssProgram = 0;
 GLuint trssFont = 0;
@@ -6,164 +8,227 @@ GLuint trssFont = 0;
 extern const char *trssVertSrc;
 extern const char *trssFragSrc;
 
-
-typedef struct
-{
-    GLuint textures[3];
-    float *mapBuffer;
-    uint32_t *fgBuffer;
-    uint32_t *bgBuffer;
-
-    int position;
-    uint32_t fgColor;
-    uint32_t bgColor;
-} trssContext_t;
-
-trssContext_t __ctx;
-extern int __h;
-extern int __w;
-
 int trssInit()
 {
     GLint stat;
     GLuint vertShader;
     GLuint fragShader;
 
-    if (!trssProgram)
-    {
-        static const float bmpIndex[] = {0.0f, 1.0f};
+    static const float bmpIndex[] = {0.0f, 1.0f};
 
-       vertShader = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(vertShader, 1, &trssVertSrc, NULL);
-        glCompileShader(vertShader);
+    vertShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertShader, 1, &trssVertSrc, NULL);
+    glCompileShader(vertShader);
 
-        fragShader = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(fragShader, 1, &trssFragSrc, NULL);
-        glCompileShader(fragShader);
-        
-        // DEBUG {{
-        glGetShaderiv(fragShader, GL_COMPILE_STATUS, &stat);
-        if (stat == GL_FALSE)
-        {
-            char *log;
-            glGetShaderiv(fragShader, GL_INFO_LOG_LENGTH, &stat);
-
-            log = malloc(stat + 1);
-            log[stat] = 0;
-            glGetShaderInfoLog(fragShader, stat, &stat, log);
-            printf("Error compilling GL_FRAGMENT_SHADER:\n%s\n", log);
-        }
-        // DEBUG }}
-
-        trssProgram = glCreateProgram();
-        glAttachShader(trssProgram, vertShader);
-        glAttachShader(trssProgram, fragShader);
-        glLinkProgram(trssProgram);
+    fragShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragShader, 1, &trssFragSrc, NULL);
+    glCompileShader(fragShader);
     
-        glUseProgram(trssProgram);
-        glUniform1i(glGetUniformLocation(trssProgram, "font"), 0);
-        glUniform1i(glGetUniformLocation(trssProgram, "map"),  1);
-        glUniform1i(glGetUniformLocation(trssProgram, "fg"),   2);
-        glUniform1i(glGetUniformLocation(trssProgram, "bg"),   3);
-
-        glGenTextures(1, &trssFont);
-        glBindTexture(GL_TEXTURE_RECTANGLE, trssFont);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glPixelMapfv(GL_PIXEL_MAP_I_TO_A, 2, bmpIndex);
-        
-        glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        
-        glTexImage2D(
-            GL_TEXTURE_RECTANGLE,
-            0,
-            GL_ALPHA,
-            fontBitmapWidthPx,
-            fontBitmapHeightPx,
-            0,
-            GL_COLOR_INDEX,
-            GL_BITMAP,
-            (void *)fontBitmap
-            );
-    }
-
-    // TMP {{
+    // DEBUG {{
+    glGetShaderiv(fragShader, GL_COMPILE_STATUS, &stat);
+    if (stat == GL_FALSE)
     {
-        const int h = 256;
-        const int w = 256;
-        const int s = h*w;
-        int i;
+        char *log;
+        glGetShaderiv(fragShader, GL_INFO_LOG_LENGTH, &stat);
 
-        __ctx.position = 0;
-        __ctx.fgColor = 0xffcccccc;
-        __ctx.bgColor = 0xff000000;
+        log = malloc(stat + 1);
+        log[stat] = 0;
+        glGetShaderInfoLog(fragShader, stat, &stat, log);
+        printf("Error compilling GL_FRAGMENT_SHADER:\n%s\n", log);
 
-        glGenTextures(3, __ctx.textures);
-        __ctx.mapBuffer = (float *)malloc(s*sizeof(float));
-        __ctx.fgBuffer = (uint32_t *)malloc(s*sizeof(uint32_t));
-        __ctx.bgBuffer = (uint32_t *)malloc(s*sizeof(uint32_t));
-
-        for (i = 0; i < s; i++)
-        {
-            __ctx.mapBuffer[i] = 1.0f;
-            __ctx.fgBuffer[i] = __ctx.fgColor;
-            __ctx.bgBuffer[i] = __ctx.bgColor;
-        }
-
-        glBindTexture(GL_TEXTURE_RECTANGLE, __ctx.textures[0]);
-        glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32F, w, h, 0, GL_RED, GL_FLOAT, (void*)__ctx.mapBuffer);
-
-        glBindTexture(GL_TEXTURE_RECTANGLE, __ctx.textures[1]);
-        glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)__ctx.fgBuffer);
-
-        glBindTexture(GL_TEXTURE_RECTANGLE, __ctx.textures[2]);
-        glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)__ctx.bgBuffer);
+        return RES_ERR_SYSTEM;
     }
-    {
-        const int h = 256;
-        const int w = 256;
-        wchar_t *i;
-        wchar_t *hello = L"Hello world P2";
+    // DEBUG }}
 
-        for (i = hello; *i; ++i)
-        {
-            if ((*i >= 0x20) && (*i <= 0x7f))
-            {
-                __ctx.mapBuffer[__ctx.position] = *i - 0x1f;
-            }
-            else
-            {
-                __ctx.mapBuffer[__ctx.position] = 0.0f;
-            }
+    trssProgram = glCreateProgram();
+    glAttachShader(trssProgram, vertShader);
+    glAttachShader(trssProgram, fragShader);
+    glLinkProgram(trssProgram);
 
-            __ctx.position++;
-            
-            glBindTexture(GL_TEXTURE_RECTANGLE, __ctx.textures[0]);
-            glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32F, w, h, 0, GL_RED, GL_FLOAT, (void*)__ctx.mapBuffer);
-        }
-    }
-    // TMP }}
+    glUseProgram(trssProgram);
+    glUniform1i(glGetUniformLocation(trssProgram, "font"), 0);
+    glUniform1i(glGetUniformLocation(trssProgram, "map"),  1);
+    glUniform1i(glGetUniformLocation(trssProgram, "fg"),   2);
+    glUniform1i(glGetUniformLocation(trssProgram, "bg"),   3);
 
-    return ERR_OK;
+    glGenTextures(1, &trssFont);
+    glBindTexture(GL_TEXTURE_RECTANGLE, trssFont);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glPixelMapfv(GL_PIXEL_MAP_I_TO_A, 2, bmpIndex);
+    
+    glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    
+    glTexImage2D(
+        GL_TEXTURE_RECTANGLE,
+        0,
+        GL_ALPHA,
+        fontBitmapWidthPx,
+        fontBitmapHeightPx,
+        0,
+        GL_COLOR_INDEX,
+        GL_BITMAP,
+        (void *)fontBitmap
+        );
+
+    return RES_OK;
 }
 
-void trssRender()
+trssContext_t *trssAlloc()
+{
+    int result;
+    int i;
+
+    trssContext_t *self;
+    
+    self = (trssContext_t *)malloc(sizeof(trssContext_t));
+    self->position = 0;
+    self->fgColor = 0xffcccccc;
+    self->bgColor = 0xff000000;
+
+    self->width = 0;
+    self->height = 0;
+
+    glGenTextures(3, self->textures);
+    for (i = 0; i < 3; i++)
+    {
+        glBindTexture(GL_TEXTURE_RECTANGLE, self->textures[i]);
+        glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameterf(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    }
+
+    self->bufferWidth = 0;
+    self->bufferHeight = 0;
+    self->mapBuffer = NULL;
+    self->fgBuffer = NULL;
+    self->bgBuffer = NULL;
+
+    return self;
+}
+
+uint32_t utilsUpperPowOf2(uint32_t x)
+{
+    x--;
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+    x++;
+    return x;    
+}
+
+int trssReshape(trssContext_t *self, int width, int height)
+{
+    uint32_t widthRq;
+    uint32_t heightRq;
+
+    widthRq = utilsUpperPowOf2(width);
+    heightRq = utilsUpperPowOf2(height);
+
+    if ((widthRq > self->bufferWidth) || (heightRq > self->bufferHeight))
+    {
+        uint32_t size = widthRq * heightRq;
+        self->mapBuffer = (float *)realloc(self->mapBuffer, size * sizeof(float));
+        self->fgBuffer = (uint32_t *)realloc(self->fgBuffer, size * sizeof(uint32_t));
+        self->bgBuffer = (uint32_t *)realloc(self->bgBuffer, size * sizeof(uint32_t));
+
+        if (!(self->width && self->height))
+        {
+            int i;
+            for (i = 0; i < size; i++)
+            {
+                self->mapBuffer[i] = ((i % widthRq) == 0) ? 2.0f : 0.0f;
+                self->fgBuffer[i] = self->fgColor;
+                self->bgBuffer[i] = self->bgColor;
+            }            
+        }
+        else
+        {
+            int i, j;
+            for (i = self->bufferHeight - 1; i >= 0; i--)
+            {
+                int srcOffs;
+                int dstOffs;
+                srcOffs = i * self->bufferWidth;
+                dstOffs = i * widthRq;
+
+                memcpy(self->mapBuffer + dstOffs, self->mapBuffer + srcOffs, self->bufferWidth * sizeof(float));
+                memcpy(self->fgBuffer + dstOffs, self->fgBuffer + srcOffs, self->bufferWidth * sizeof(uint32_t));
+                memcpy(self->bgBuffer + dstOffs, self->bgBuffer + srcOffs, self->bufferWidth * sizeof(uint32_t));
+
+                for (j = self->bufferWidth; j < widthRq; j++)
+                {
+                    self->mapBuffer[j + dstOffs] = 3.0f;
+                    self->fgBuffer[j + dstOffs] = self->fgColor;
+                    self->bgBuffer[j + dstOffs] = self->bgColor;                    
+                }
+            }
+
+            for (i = self->bufferHeight * widthRq; i < size; i++)
+            {
+                self->mapBuffer[i] = 4.0f;
+                self->fgBuffer[i] = self->fgColor;
+                self->bgBuffer[i] = self->bgColor;
+            }
+
+            // int srcOffs = self->bufferWidth << 1;
+            // int srcPos = size - srcOffs;
+            // for (i = self->bufferHeight - 2; i >= 0; i -= 2)
+            // {
+
+            // }
+        }
+
+        self->bufferWidth = widthRq;
+        self->bufferHeight = heightRq;
+        trssFlush(self);
+    }
+
+    self->width = width;
+    self->height = height;
+
+    return RES_OK;
+}
+
+// void tmp()
+// {
+//     const int h = 256;
+//     const int w = 256;
+//     wchar_t *i;
+//     wchar_t *hello = L"Hello world P2";
+
+//     for (i = hello; *i; ++i)
+//     {
+//         if ((*i >= 0x20) && (*i <= 0x7f))
+//         {
+//             __ctx.mapBuffer[__ctx.position] = *i - 0x1f;
+//         }
+//         else
+//         {
+//             __ctx.mapBuffer[__ctx.position] = 0.0f;
+//         }
+
+//         __ctx.position++;
+        
+//         glBindTexture(GL_TEXTURE_RECTANGLE, __ctx.textures[0]);
+//         glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32F, w, h, 0, GL_RED, GL_FLOAT, (void*)__ctx.mapBuffer);
+
+//     return S_OK;
+// }
+
+int trssRender(trssContext_t *self)
 {
     int i;
+    int __w;
+    int __h;
+
+    __w = self->width * 8;
+    __h = self->width * 16;
 
     glUseProgram(trssProgram);
     
@@ -173,7 +238,7 @@ void trssRender()
     for (i = 0; i < 3; i++)
     {
         glActiveTexture(GL_TEXTURE1 + i);
-        glBindTexture(GL_TEXTURE_RECTANGLE, __ctx.textures[i]);
+        glBindTexture(GL_TEXTURE_RECTANGLE, self->textures[i]);
     }
 
     glPushMatrix();
@@ -190,6 +255,32 @@ void trssRender()
     }
     glEnd();
     glPopMatrix();  
+
+    return RES_OK;
+}
+
+int trssFree(trssContext_t *self)
+{
+    return RES_OK;
+}
+
+int trssFlush(trssContext_t *self)
+{
+    glBindTexture(GL_TEXTURE_RECTANGLE, self->textures[0]);
+    glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32F, self->bufferWidth, self->bufferHeight, 0, GL_RED, GL_FLOAT, (void*)self->mapBuffer);
+
+    glBindTexture(GL_TEXTURE_RECTANGLE, self->textures[1]);
+    glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA, self->bufferWidth, self->bufferHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)self->fgBuffer);
+
+    glBindTexture(GL_TEXTURE_RECTANGLE, self->textures[2]);
+    glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RGBA, self->bufferWidth, self->bufferHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, (void*)self->bgBuffer);
+
+    return RES_OK;
+}
+
+int trssWrite(trssContext_t *self, wchar_t *data)
+{
+    return RES_OK;
 }
 
 const char *trssVertSrc =

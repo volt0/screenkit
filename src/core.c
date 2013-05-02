@@ -1,7 +1,9 @@
 #include "screen.h"
+#include "trss.h"
 
 int __h;
 int __w;
+trssContext_t *__ctx;
 
 int coreInit()
 {
@@ -19,6 +21,7 @@ int coreInit()
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
 	trssInit();
+	__ctx = trssAlloc();
 
 	return ERR_OK;
 }
@@ -27,6 +30,7 @@ void coreReshape(int width, int height)
 {
 	__h = height;
 	__w = width;
+	trssReshape(__ctx, width/8, height/16);
 
 	glViewport(0, 0, width, height);
 	glMatrixMode(GL_PROJECTION);
@@ -51,7 +55,7 @@ void coreRender()
 	}
 	glEnd();
 
-	trssRender();
+	trssRender(__ctx);
 
 	glPopMatrix();
 

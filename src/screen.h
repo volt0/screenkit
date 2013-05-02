@@ -18,13 +18,4 @@ int coreInit();
 void coreReshape(int width, int height);
 void coreRender();
 
-int trssInit();
-void trssRender();
-
-extern const int fontBitmapWidthEm;
-extern const int fontBitmapHeightEm;
-extern const int fontBitmapWidthPx;
-extern const int fontBitmapHeightPx;
-extern const unsigned char fontBitmap[];
-
 #endif
